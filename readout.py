@@ -2,6 +2,7 @@ import visa
 import numpy as np
 from struct import unpack
 import pylab
+import matplotlib.pyplot as plt
 
 
 
@@ -65,24 +66,40 @@ def unpackData(data,offsets):
     return [time,volts]
 
 def main():
-    [rm,scope] = init('TCPIP::152.19.204.238::INSTR') # 'USB0::0x0699::0x0401::No_Serial::INSTR'
-    offsets = getOffsets(scope)
-    [armed,auto,ready,save,trigger] = getTriggerConditions()
+    try:
+        ID = 'TCPIP::152.19.204.238::INSTR'
+        [rm,scope] = init(ID)
+        offsets = getOffsets(scope)
+        [armed,auto,ready,save,trigger] = getTriggerConditions()
 
-    state = checkTrigger(scope)
-    while(state != trigger):
-        if(state == trigger):
-            print "Scope has triggered, reading out data now"
-            data = readData(scope)
-            [time,volts] = unpackData(data,offsets)
-            pylab.plot(time,volts)
-            pylab.show()
-        if (state == auto):
-            setTriggerNorm(scope)
-
-        else:
-            print "State was: ", state
         state = checkTrigger(scope)
+
+        plt.ion()
+        fig = plt.figure()
+
+        triggerCount = 0;
+        checkCount = 1;
+        while(True):
+            if(state == trigger):
+                triggerCount+=1;
+                print "Scope has triggered %d/%d, reading out data now" % (triggerCount,checkCount)
+                data = readData(scope)
+                [time,volts] = unpackData(data,offsets)
+                plt.plot(time,volts)
+                plt.show()
+                plt.pause(0.0001)
+                if (state == auto):
+                    setTriggerNorm(scope)
+
+        # else:
+            #print "State was: ", state
+
+            state = checkTrigger(scope)
+            checkCount+=1
+        rm.close()
+
+    finally:
+        print "closing..."
     return 0
 
 if __name__ == "__main__":
